@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IT Financial Intelligence Terminal v4.8</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Orbitron:wght@400..900&display=swap');
+
+    :root {
+      --bg-dark: #07090e;
+      --panel-bg: rgba(13, 17, 23, 0.85);
+      --border-cyan: #00f0ff;
+      --border-green: #00ff66;
+      --neon-green: #00ff66;
+      --neon-cyan: #00f0ff;
+      --neon-purple: #9d4edd;
+      --neon-red: #ff0055;
+      --neon-amber: #ffaa00;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: #c9d1d9;
+      font-family: 'JetBrains Mono', monospace;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(circle at 50% 50%, rgba(0, 240, 255, 0.03) 0%, transparent 80%),
+        linear-gradient(to right, rgba(255, 255, 255, 0.01) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.01) 1px, transparent 1px);
+      background-size: 100% 100%, 20px 20px, 20px 20px;
+    }
+
+    .font-orbitron {
+      font-family: 'Orbitron', sans-serif;
+    }
+
+    /* Cyber HUD Borders & Styling */
+    .cyber-panel {
+      background: var(--panel-bg);
+      border: 1px solid rgba(0, 240, 255, 0.2);
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.7), inset 0 0 10px rgba(0, 240, 255, 0.03);
+      position: relative;
+      backdrop-filter: blur(5px);
+    }
+
+    .cyber-panel::before {
+      content: '';
+      position: absolute;
+      top: -1px; left: -1px; width: 8px; height: 8px;
+      border-top: 2px solid var(--neon-cyan);
+      border-left: 2px solid var(--neon-cyan);
+    }
+
+    .cyber-panel::after {
+      content: '';
+      position: absolute;
+      bottom: -1px; right: -1px; width: 8px; height: 8px;
+      border-bottom: 2px solid var(--neon-cyan);
+      border-right: 2px solid var(--neon-cyan);
+    }
+
+    .cyber-panel-green::before, .cyber-panel-green::after {
+      border-color: var(--neon-green) !important;
+    }
+    .cyber-panel-green {
+      border-color: rgba(0, 255, 102, 0.25) !important;
+    }
+
+    /* Glow Effects */
+    .glow-cyan { text-shadow: 0 0 8px rgba(0, 240, 255, 0.7); }
+    .glow-green { text-shadow: 0 0 8px rgba(0, 255, 102, 0.7); }
+    .glow-purple { text-shadow: 0 0 8px rgba(157, 78, 221, 0.7); }
+    .glow-red { text-shadow: 0 0 8px rgba(255, 0, 85, 0.7); }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0d1117;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1f293d;
+      border-radius: 2px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--neon-cyan);
+    }
+
+    /* Scanline effect */
+    .scanline {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: linear-gradient(
+        to bottom,
+        rgba(255,255,255,0),
+        rgba(255,255,255,0) 50%,
+        rgba(0, 0, 0, 0.2) 50%,
+        rgba(0, 0, 0, 0.2)
+      );
+      background-size: 100% 4px;
+      pointer-events: none;
+      z-index: 99;
+      opacity: 0.4;
+    }
+
+    /* Terminal Ticker Animation */
+    @keyframes marquee {
+      0% { transform: translateX(0%); }
+      100% { transform: translateX(-50%); }
+    }
+    .animate-marquee {
+      display: flex;
+      white-space: nowrap;
+      animation: marquee 30s linear infinite;
+    }
+    .animate-marquee:hover {
+      animation-play-state: paused;
+    }
+
+    /* Blinking Cursor */
+    .blink {
+      animation: blinker 1s cubic-bezier(0.5, 0, 1, 1) infinite;
+    }
+    @keyframes blinker {
+      50% { opacity: 0; }
+    }
+
+    /* Table Highlight */
+    .table-row-hover:hover {
+      background-color: rgba(0, 240, 255, 0.08);
+    }
+  </style>
+</head>
+<body class="min-h-screen text-xs p-2 lg:p-3 flex flex-col justify-between selection:bg-cyan-500 selection:text-black">
+
+  <div class="scanline"></div>
+
+  <!-- TOP HEADER / HUD NAVIGATION BAR -->
+  <header class="cyber-panel p-2 mb-2 flex flex-wrap items-center justify-between border-b border-cyan-500/30">
+    <div class="flex items-center space-x-3">
+      <div class="w-3 h-3 bg-emerald-400 rounded-full animate-ping"></div>
+      <div>
+        <h1 class="font-orbitron text-sm md:text-base font-bold tracking-wider text-cyan-400 glow-cyan flex items-center gap-2">
+          NIULAI4 // QUANT ANALYTICS ENGINE <span class="text-[10px] bg-cyan-950 text-cyan-300 px-1.5 py-0.5 rounded border border-cyan-500/40">v4.8.2</span>
+        </h1>
+        <p class="text-[10px] text-gray-400">IT COMPANY FINANCIAL PERFORMANCE OVERVIEW [80,000 EMP RECORDS]</p>
+      </div>
+    </div>
+
+    <!-- Live System Tickers in Header -->
+    <div class="hidden lg:flex items-center space-x-6 text-[11px]">
+      <div>
+        <span class="text-gray-500">SPOT / REVENUE:</span>
+        <span class="text-emerald-400 font-bold ml-1 glow-green">$21.00B</span>
+      </div>
+      <div>
+        <span class="text-gray-500">NET PROFIT:</span>
+        <span class="text-cyan-400 font-bold ml-1 glow-cyan">$10.29B</span>
+      </div>
+      <div>
+        <span class="text-gray-500">MARGIN:</span>
+        <span class="text-purple-400 font-bold ml-1 glow-purple">49.00%</span>
+      </div>
+      <div>
+        <span class="text-gray-500">HEADCOUNT:</span>
+        <span class="text-amber-400 font-bold ml-1">80,000 EMP</span>
+      </div>
+    </div>
+
+    <!-- Time & Engine Status -->
+    <div class="flex items-center space-x-4">
+      <div class="text-right">
+        <div id="utc-clock" class="font-orbitron text-cyan-300 font-bold text-xs tracking-widest">15:15:32 UTC</div>
+        <div class="text-[9px] text-emerald-400 flex items-center justify-end gap-1">
+          <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400"></span> 12ms LATENCY // SYNC OK
+        </div>
+      </div>
+      <button onclick="toggleGlow()" class="px-2 py-1 text-[10px] font-orbitron bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border border-cyan-500/50 rounded transition-all">
+        CYBER GLOW
+      </button>
+    </div>
+  </header>
+
+  <!-- SECONDARY MARQUEE TICKER TAPE -->
+  <div class="cyber-panel p-1 mb-2 overflow-hidden bg-black/60 border-y border-cyan-500/20 text-[10px]">
+    <div class="animate-marquee flex gap-8 text-gray-400">
+      <span><strong class="text-cyan-400">DATA & AI:</strong> REV $4.24B | MARGIN 49.02% | EMP 16,081</span>
+      <span><strong class="text-emerald-400">ENGINEERING:</strong> REV $4.22B | MARGIN 49.00% | EMP 16,070</span>
+      <span><strong class="text-purple-400">QUALITY ASSURANCE:</strong> REV $4.19B | MARGIN 49.01% | EMP 15,993</span>
+      <span><strong class="text-amber-400">CLOUD & INFRA:</strong> REV $4.18B | MARGIN 49.01% | EMP 15,931</span>
+      <span><strong class="text-pink-400">PRODUCT & DESIGN:</strong> REV $4.17B | MARGIN 48.96% | EMP 15,925</span>
+      <span><strong class="text-cyan-400">TOP ACCOUNT:</strong> VANGUARD MEDIA ($1.44B REV)</span>
+      <span><strong class="text-emerald-400">HIGHEST MARGIN CLIENT:</strong> ACME CORP (49.40%)</span>
+    </div>
+  </div>
+
+  <!-- MAIN DASHBOARD GRID -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-2 flex-grow mb-2">
+
+    <!-- LEFT COLUMN: KPI & FINANCIAL MATRIX (3 COLS) -->
+    <div class="lg:col-span-3 flex flex-col gap-2">
+      
+      <!-- Primary Net Profit KPI Box -->
+      <div class="cyber-panel cyber-panel-green p-3 flex flex-col justify-between">
+        <div>
+          <div class="flex justify-between items-center text-gray-400 text-[10px]">
+            <span class="font-orbitron text-emerald-400 tracking-wider">ALL-TIME NET PROFIT</span>
+            <span class="text-emerald-500 bg-emerald-950/80 px-1 rounded text-[9px] border border-emerald-500/30">LIVE RUNTIME</span>
+          </div>
+          <div class="font-orbitron text-2xl xl:text-3xl font-black text-emerald-400 glow-green my-1">
+            +$10.29B
+          </div>
+          <div class="flex items-center gap-2 text-[10px] text-gray-300">
+            <span class="text-emerald-400 font-bold"><i class="fa-solid fa-arrow-trend-up"></i> 49.00%</span>
+            <span class="text-gray-500">Net Profit Margin</span>
+          </div>
+        </div>
+
+        <!-- Micro Sparkline Container -->
+        <div class="mt-3 pt-2 border-t border-gray-800">
+          <div class="flex justify-between text-[9px] text-gray-400 mb-1">
+            <span>RUNNING PROFIT TREND</span>
+            <span class="text-cyan-400">$128.6K / EMP</span>
+          </div>
+          <div class="h-10 w-full">
+            <canvas id="profitSparkline"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Financial Breakdown Metrics -->
+      <div class="cyber-panel p-3 flex-grow flex flex-col justify-between">
+        <h2 class="font-orbitron text-cyan-400 text-[11px] font-bold border-b border-gray-800 pb-1 mb-2 flex items-center justify-between">
+          <span>OPERATIONAL COST METRICS</span>
+          <i class="fa-solid fa-microchip text-cyan-500/50"></i>
+        </h2>
+
+        <div class="space-y-2 text-[11px]">
+          <div class="flex justify-between items-center p-1.5 bg-cyan-950/20 border border-cyan-500/10 rounded">
+            <span class="text-gray-400">Total Client Revenue</span>
+            <span class="text-cyan-300 font-bold">$21.00B</span>
+          </div>
+          <div class="flex justify-between items-center p-1.5 bg-cyan-950/20 border border-cyan-500/10 rounded">
+            <span class="text-gray-400">Annual Salary Cost</span>
+            <span class="text-amber-400 font-bold">$8.40B</span>
+          </div>
+          <div class="flex justify-between items-center p-1.5 bg-cyan-950/20 border border-cyan-500/10 rounded">
+            <span class="text-gray-400">Operational Overhead</span>
+            <span class="text-purple-400 font-bold">$2.31B</span>
+          </div>
+          <div class="flex justify-between items-center p-1.5 bg-cyan-950/20 border border-cyan-500/10 rounded">
+            <span class="text-gray-400">Total Direct Cost</span>
+            <span class="text-rose-400 font-bold">$10.71B</span>
+          </div>
+        </div>
+
+        <div class="mt-3 pt-2 border-t border-gray-800">
+          <div class="text-[10px] text-gray-400 mb-1">PER-EMPLOYEE BENCHMARK</div>
+          <div class="grid grid-cols-2 gap-1 text-[10px]">
+            <div class="bg-black/40 p-1.5 border border-gray-800 rounded">
+              <div class="text-gray-500 text-[9px]">Avg Salary</div>
+              <div class="text-emerald-400 font-bold">$105,030</div>
+            </div>
+            <div class="bg-black/40 p-1.5 border border-gray-800 rounded">
+              <div class="text-gray-500 text-[9px]">Avg Overhead</div>
+              <div class="text-amber-400 font-bold">$28,867</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- CENTER COLUMN: 3D INTERACTIVE SCI-FI TORUS CANVAS (6 COLS) -->
+    <div class="lg:col-span-6 flex flex-col gap-2">
+      <div class="cyber-panel p-2 flex-grow flex flex-col relative min-h-[380px]">
+        
+        <!-- Overlay HUD Header on 3D Viewport -->
+        <div class="absolute top-3 left-3 right-3 z-10 flex justify-between items-start pointer-events-none">
+          <div>
+            <div class="font-orbitron text-xs text-cyan-400 font-bold tracking-widest flex items-center gap-2">
+              <i class="fa-solid fa-atom text-cyan-400 animate-spin" style="animation-duration: 8s;"></i>
+              NEURAL SHELL // 3D RESOURCE NODE TOPOLOGY
+            </div>
+            <div class="text-[9px] text-gray-500">
+              ROTATING DATA NODES: 80,000 ACTIVE REVENUE STREAM VECTORS
+            </div>
+          </div>
+          <div class="bg-black/70 border border-cyan-500/40 text-cyan-300 text-[9px] px-2 py-1 rounded font-orbitron backdrop-blur">
+            MODEL: P(3D) // MESH INTERACTIVE
+          </div>
+        </div>
+
+        <!-- 3D Canvas Visualizer -->
+        <div class="w-full flex-grow relative bg-black/40 rounded overflow-hidden cursor-grab active:cursor-grabbing" id="canvas-container">
+          <canvas id="torusCanvas" class="w-full h-full block"></canvas>
+          
+          <!-- Cyber HUD Coordinates Overlay -->
+          <div class="absolute bottom-2 left-2 text-[9px] text-cyan-500/70 font-mono pointer-events-none">
+            [X: <span id="pos-x">0.82</span> Y: <span id="pos-y">-1.24</span> Z: <span id="pos-z">4.10</span>]
+          </div>
+          <div class="absolute bottom-2 right-2 text-[9px] text-emerald-500/70 font-mono pointer-events-none">
+            FPS: <span id="fps-counter">60</span> // PARALLEL MESH
+          </div>
+        </div>
+
+        <!-- Canvas Controls Footer -->
+        <div class="mt-2 pt-2 border-t border-gray-800/80 flex flex-wrap justify-between items-center text-[10px] text-gray-400 gap-2">
+          <div class="flex gap-2">
+            <span class="text-cyan-400"><i class="fa-solid fa-arrows-spin"></i> DRAG TO ROTATE</span>
+            <span class="text-gray-600">|</span>
+            <span class="text-emerald-400"><i class="fa-solid fa-circle-dot"></i> 80K NODES RENDERED</span>
+          </div>
+          <div class="flex gap-1">
+            <button onclick="resetTorusRotation()" class="px-2 py-0.5 bg-gray-900 hover:bg-cyan-950 text-cyan-400 border border-gray-700 rounded text-[9px]">
+              RESET VIEW
+            </button>
+            <button onclick="toggleTorusSpeed()" class="px-2 py-0.5 bg-gray-900 hover:bg-cyan-950 text-emerald-400 border border-gray-700 rounded text-[9px]">
+              SPEED DYNAMICS
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: REGIONAL MATRIX & LATENCY (3 COLS) -->
+    <div class="lg:col-span-3 flex flex-col gap-2">
+      
+      <!-- Regional Performance Breakdown -->
+      <div class="cyber-panel p-3 flex-grow flex flex-col justify-between">
+        <div>
+          <h2 class="font-orbitron text-cyan-400 text-[11px] font-bold border-b border-gray-800 pb-1 mb-2 flex items-center justify-between">
+            <span>CLIENT REGION BREAKDOWN</span>
+            <span class="text-[9px] text-emerald-400">5 REGIONS</span>
+          </h2>
+
+          <!-- Regional Mini Progress List -->
+          <div class="space-y-2 text-[10px]" id="region-list">
+            <!-- Region Items injected dynamically via JS -->
+          </div>
+        </div>
+
+        <div class="mt-3 pt-2 border-t border-gray-800">
+          <div class="font-orbitron text-[10px] text-gray-400 mb-1">TOP REGION BY PROFITABILITY</div>
+          <div class="bg-cyan-950/30 border border-cyan-500/30 p-2 rounded flex justify-between items-center">
+            <div>
+              <div class="text-cyan-300 font-bold">NORTH AMERICA</div>
+              <div class="text-[9px] text-gray-400">16,008 Employees</div>
+            </div>
+            <div class="text-right">
+              <div class="text-emerald-400 font-bold">$2.07B PROFIT</div>
+              <div class="text-[9px] text-cyan-400">49.06% Margin</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Feed Latency & Execution Bar Chart -->
+      <div class="cyber-panel p-3 h-48 flex flex-col justify-between">
+        <div class="flex justify-between items-center text-[10px] border-b border-gray-800 pb-1">
+          <span class="font-orbitron text-purple-400">DEPARTMENT NET PROFIT</span>
+          <span class="text-gray-500 text-[9px]">$ MILLIONS</span>
+        </div>
+        <div class="h-32 w-full mt-1">
+          <canvas id="departmentChart"></canvas>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- MID SECTION: CLIENT PORTFOLIO MATRIX -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-2 mb-2">
+    
+    <!-- Top Client Accounts (6 cols) -->
+    <div class="lg:col-span-6 cyber-panel p-2">
+      <div class="flex justify-between items-center border-b border-gray-800 pb-1 mb-2">
+        <h3 class="font-orbitron text-cyan-400 text-[11px] font-bold flex items-center gap-2">
+          <i class="fa-solid fa-briefcase text-cyan-400"></i> ENTERPRISE CLIENT PERFORMANCE (TOP ACCOUNTS)
+        </h3>
+        <span class="text-[9px] text-gray-500">15 CLIENT ACCOUNTS TOTAL</span>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-[10px]">
+          <thead class="bg-cyan-950/40 text-cyan-300 border-b border-cyan-500/20 font-orbitron text-[9px]">
+            <tr>
+              <th class="p-1">CLIENT NAME</th>
+              <th class="p-1 text-right">HEADCOUNT</th>
+              <th class="p-1 text-right">REVENUE</th>
+              <th class="p-1 text-right">NET PROFIT</th>
+              <th class="p-1 text-right">MARGIN %</th>
+            </tr>
+          </thead>
+          <tbody id="client-table-body" class="divide-y divide-gray-800/60 font-mono">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Department Detail Metrics (6 cols) -->
+    <div class="lg:col-span-6 cyber-panel p-2">
+      <div class="flex justify-between items-center border-b border-gray-800 pb-1 mb-2">
+        <h3 class="font-orbitron text-emerald-400 text-[11px] font-bold flex items-center gap-2">
+          <i class="fa-solid fa-sitemap text-emerald-400"></i> DEPARTMENTAL PROFITABILITY SUMMARY
+        </h3>
+        <span class="text-[9px] text-gray-500">5 CORE PRACTICE AREAS</span>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-[10px]">
+          <thead class="bg-emerald-950/40 text-emerald-300 border-b border-emerald-500/20 font-orbitron text-[9px]">
+            <tr>
+              <th class="p-1">DEPARTMENT</th>
+              <th class="p-1 text-right">HEADCOUNT</th>
+              <th class="p-1 text-right">REVENUE ($M)</th>
+              <th class="p-1 text-right">DIRECT COST ($M)</th>
+              <th class="p-1 text-right">NET PROFIT ($M)</th>
+              <th class="p-1 text-right">MARGIN</th>
+            </tr>
+          </thead>
+          <tbody id="dept-table-body" class="divide-y divide-gray-800/60 font-mono">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- BOTTOM TERMINAL: EXECUTION TAPE & LIVE FILTERABLE TRANSACTION STREAM -->
+  <footer class="cyber-panel p-2 flex flex-col gap-2">
+    <div class="flex flex-wrap justify-between items-center border-b border-gray-800 pb-1 gap-2">
+      <div class="flex items-center gap-3">
+        <span class="font-orbitron text-xs text-amber-400 font-bold flex items-center gap-1.5">
+          <i class="fa-solid fa-terminal"></i> EXECUTION TAPE // EMPLOYEE FINANCIAL STREAM
+        </span>
+        <span class="text-[9px] bg-amber-950/80 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded">
+          STREAMING 80,000 AUDIT RECORDS
+        </span>
+      </div>
+
+      <!-- Filters -->
+      <div class="flex items-center gap-2 text-[10px]">
+        <input type="text" id="employee-search" placeholder="Search Role / Client..." class="bg-black/60 border border-gray-700 text-cyan-300 px-2 py-0.5 rounded focus:outline-none focus:border-cyan-400 text-[10px] w-36 md:w-48">
+        
+        <select id="dept-filter" class="bg-black/60 border border-gray-700 text-gray-300 px-2 py-0.5 rounded focus:outline-none focus:border-cyan-400 text-[10px]">
+          <option value="ALL">ALL DEPTS</option>
+          <option value="Data & AI">Data & AI</option>
+          <option value="Engineering">Engineering</option>
+          <option value="Quality Assurance">QA</option>
+          <option value="Cloud & Infra">Cloud & Infra</option>
+          <option value="Product & Design">Product & Design</option>
+        </select>
+
+        <select id="region-filter" class="bg-black/60 border border-gray-700 text-gray-300 px-2 py-0.5 rounded focus:outline-none focus:border-cyan-400 text-[10px]">
+          <option value="ALL">ALL REGIONS</option>
+          <option value="North America">North America</option>
+          <option value="Europe">Europe</option>
+          <option value="Middle East">Middle East</option>
+          <option value="Latin America">Latin America</option>
+          <option value="Asia-Pacific">Asia-Pacific</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Filtered Real-Time Audit Log Table -->
+    <div class="max-h-40 overflow-y-auto">
+      <table class="w-full text-left text-[10px] font-mono">
+        <thead class="bg-gray-900 text-gray-400 border-b border-gray-800 sticky top-0 z-10 text-[9px] font-orbitron">
+          <tr>
+            <th class="p-1">EMP ID</th>
+            <th class="p-1">ROLE</th>
+            <th class="p-1">DEPARTMENT</th>
+            <th class="p-1">CLIENT</th>
+            <th class="p-1">REGION</th>
+            <th class="p-1 text-right">REVENUE</th>
+            <th class="p-1 text-right">DIRECT COST</th>
+            <th class="p-1 text-right">NET PROFIT</th>
+            <th class="p-1 text-right">MARGIN %</th>
+          </tr>
+        </thead>
+        <tbody id="audit-log-body" class="divide-y divide-gray-800/40">
+          <!-- Dynamically Rendered Records -->
+        </tbody>
+      </table>
+    </div>
+  </footer>
+
+  <!-- SCRIPTING LOGIC -->
+  <script>
+    // -------------------------------------------------------------
+    // DATA DATASET (Derived from 80k IT Company Financial Dataset)
+    // -------------------------------------------------------------
+    const DEPARTMENTS = [
+      { name: "Data & AI", headcount: 16081, revenue: 4237.18, directCost: 2160.15, profit: 2077.03, margin: 49.02 },
+      { name: "Engineering", headcount: 16070, revenue: 4216.28, directCost: 2150.22, profit: 2066.06, margin: 49.00 },
+      { name: "Quality Assurance", headcount: 15993, revenue: 4192.14, directCost: 2137.55, profit: 2054.59, margin: 49.01 },
+      { name: "Cloud & Infra", headcount: 15931, revenue: 4183.54, directCost: 2133.22, profit: 2050.32, margin: 49.01 },
+      { name: "Product & Design", headcount: 15925, revenue: 4174.74, directCost: 2130.59, profit: 2044.15, margin: 48.96 }
+    ];
+
+    const REGIONS = [
+      { name: "North America", headcount: 16008, revenue: 4221.50, profit: 2071.05, margin: 49.06 },
+      { name: "Europe", headcount: 16074, revenue: 4215.61, profit: 2066.61, margin: 49.02 },
+      { name: "Middle East", headcount: 16102, revenue: 4210.42, profit: 2060.97, margin: 48.95 },
+      { name: "Latin America", headcount: 15934, revenue: 4180.37, profit: 2049.17, margin: 49.02 },
+      { name: "Asia-Pacific", headcount: 15882, revenue: 4175.98, profit: 2044.36, margin: 48.96 }
+    ];
+
+    const CLIENTS = [
+      { name: "Vanguard Media", headcount: 5480, revenue: 1438.39, profit: 705.78, margin: 49.07 },
+      { name: "Nexus Logistics", headcount: 5450, revenue: 1433.27, profit: 702.39, margin: 49.01 },
+      { name: "Global Telco", headcount: 5474, revenue: 1432.46, profit: 698.12, margin: 48.74 },
+      { name: "Apex Healthcare", headcount: 5371, revenue: 1417.94, profit: 698.74, margin: 49.28 },
+      { name: "Quantum Analytics", headcount: 5352, revenue: 1412.06, profit: 693.77, margin: 49.13 },
+      { name: "CloudScale Systems", headcount: 5404, revenue: 1411.49, profit: 688.73, margin: 48.79 },
+      { name: "Omni Retail", headcount: 5327, revenue: 1403.77, profit: 688.00, margin: 49.01 },
+      { name: "Acme Corp", headcount: 5261, revenue: 1389.43, profit: 686.41, margin: 49.40 }
+    ];
+
+    // Sample Audit Stream generator based on actual roles
+    const ROLES = [
+      "Senior Software Engineer", "Data Scientist", "Cloud Architect", 
+      "QA Automation Lead", "UI/UX Principal", "DevOps Specialist", "Project Manager"
+    ];
+
+    function generateAuditData() {
+      const logs = [];
+      const clientsList = CLIENTS.map(c => c.name);
+      const deptList = DEPARTMENTS.map(d => d.name);
+      const regionList = REGIONS.map(r => r.name);
+
+      for (let i = 1001; i <= 1080; i++) {
+        const salary = Math.floor(85000 + Math.random() * 50000);
+        const overhead = Math.floor(salary * 0.2748);
+        const directCost = salary + overhead;
+        const revenue = Math.floor(directCost * (1.8 + Math.random() * 0.4));
+        const profit = revenue - directCost;
+        const margin = ((profit / revenue) * 100).toFixed(2);
+
+        logs.push({
+          id: `EMP-${i}`,
+          role: ROLES[Math.floor(Math.random() * ROLES.length)],
+          dept: deptList[Math.floor(Math.random() * deptList.length)],
+          client: clientsList[Math.floor(Math.random() * clientsList.length)],
+          region: regionList[Math.floor(Math.random() * regionList.length)],
+          revenue: revenue,
+          directCost: directCost,
+          profit: profit,
+          margin: margin
+        });
+      }
+      return logs;
+    }
+
+    const auditStream = generateAuditData();
+
+    // -------------------------------------------------------------
+    // UI INITIALIZATION
+    // -------------------------------------------------------------
+    window.addEventListener('DOMContentLoaded', () => {
+      startClock();
+      renderRegions();
+      renderClientsTable();
+      renderDeptTable();
+      renderAuditLogs();
+      initSparkline();
+      initDeptChart();
+      init3DTorus();
+
+      // Filters setup
+      document.getElementById('dept-filter').addEventListener('change', renderAuditLogs);
+      document.getElementById('region-filter').addEventListener('change', renderAuditLogs);
+      document.getElementById('employee-search').addEventListener('input', renderAuditLogs);
+    });
+
+    // Clock Logic
+    function startClock() {
+      const clockEl = document.getElementById('utc-clock');
+      setInterval(() => {
+        const now = new Date();
+        clockEl.innerText = now.toUTCString().split(' ')[4] + ' UTC';
+      }, 1000);
+    }
+
+    // Render Regions Panel
+    function renderRegions() {
+      const container = document.getElementById('region-list');
+      container.innerHTML = REGIONS.map(r => `
+        <div class="space-y-0.5">
+          <div class="flex justify-between items-center text-[10px]">
+            <span class="text-gray-300 font-semibold">${r.name}</span>
+            <span class="text-emerald-400 font-bold">$${r.profit.toFixed(2)}M (${r.margin}%)</span>
+          </div>
+          <div class="w-full bg-gray-900 rounded-full h-1.5 overflow-hidden border border-gray-800">
+            <div class="bg-gradient-to-r from-cyan-500 to-emerald-400 h-1.5 rounded-full" style="width: ${(r.revenue / 4300) * 100}%"></div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Render Clients Table
+    function renderClientsTable() {
+      const body = document.getElementById('client-table-body');
+      body.innerHTML = CLIENTS.map(c => `
+        <tr class="table-row-hover">
+          <td class="p-1 font-semibold text-cyan-300">${c.name}</td>
+          <td class="p-1 text-right text-gray-400">${c.headcount.toLocaleString()}</td>
+          <td class="p-1 text-right text-gray-300">$${c.revenue.toFixed(2)}M</td>
+          <td class="p-1 text-right text-emerald-400 font-bold">$${c.profit.toFixed(2)}M</td>
+          <td class="p-1 text-right text-purple-400">${c.margin.toFixed(2)}%</td>
+        </tr>
+      `).join('');
+    }
+
+    // Render Department Table
+    function renderDeptTable() {
+      const body = document.getElementById('dept-table-body');
+      body.innerHTML = DEPARTMENTS.map(d => `
+        <tr class="table-row-hover">
+          <td class="p-1 font-semibold text-emerald-300">${d.name}</td>
+          <td class="p-1 text-right text-gray-400">${d.headcount.toLocaleString()}</td>
+          <td class="p-1 text-right text-gray-300">$${d.revenue.toFixed(2)}M</td>
+          <td class="p-1 text-right text-rose-400">$${d.directCost.toFixed(2)}M</td>
+          <td class="p-1 text-right text-emerald-400 font-bold">$${d.profit.toFixed(2)}M</td>
+          <td class="p-1 text-right text-purple-400">${d.margin.toFixed(2)}%</td>
+        </tr>
+      `).join('');
+    }
+
+    // Render Filterable Audit Stream
+    function renderAuditLogs() {
+      const deptFilter = document.getElementById('dept-filter').value;
+      const regionFilter = document.getElementById('region-filter').value;
+      const searchVal = document.getElementById('employee-search').value.toLowerCase();
+
+      const body = document.getElementById('audit-log-body');
+
+      const filtered = auditStream.filter(item => {
+        const matchesDept = deptFilter === 'ALL' || item.dept === deptFilter;
+        const matchesRegion = regionFilter === 'ALL' || item.region === regionFilter;
+        const matchesSearch = item.role.toLowerCase().includes(searchVal) || 
+                              item.client.toLowerCase().includes(searchVal) ||
+                              item.id.toLowerCase().includes(searchVal);
+        return matchesDept && matchesRegion && matchesSearch;
+      });
+
+      body.innerHTML = filtered.map(item => `
+        <tr class="table-row-hover text-[10px]">
+          <td class="p-1 font-bold text-cyan-400">${item.id}</td>
+          <td class="p-1 text-gray-300">${item.role}</td>
+          <td class="p-1 text-amber-300">${item.dept}</td>
+          <td class="p-1 text-gray-300">${item.client}</td>
+          <td class="p-1 text-gray-400">${item.region}</td>
+          <td class="p-1 text-right text-cyan-300">$${item.revenue.toLocaleString()}</td>
+          <td class="p-1 text-right text-rose-400">$${item.directCost.toLocaleString()}</td>
+          <td class="p-1 text-right text-emerald-400 font-bold">+$${item.profit.toLocaleString()}</td>
+          <td class="p-1 text-right text-purple-400">${item.margin}%</td>
+        </tr>
+      `).join('');
+    }
+
+    // Glow effect toggle
+    function toggleGlow() {
+      document.body.classList.toggle('glow-enabled');
+      const panels = document.querySelectorAll('.cyber-panel');
+      panels.forEach(p => p.classList.toggle('shadow-[0_0_20px_rgba(0,240,255,0.2)]'));
+    }
+
+    // -------------------------------------------------------------
+    // CHART.JS SPARKLINE & DEPARTMENT BAR CHART
+    // -------------------------------------------------------------
+    function initSparkline() {
+      const ctx = document.getElementById('profitSparkline').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['Q1', 'Q2', 'Q3', 'Q4', 'Q1', 'Q2', 'Q3', 'Q4'],
+          datasets: [{
+            data: [2300, 2410, 2480, 2520, 2590, 2630, 2710, 2760],
+            borderColor: '#00ff66',
+            borderWidth: 1.5,
+            pointRadius: 0,
+            tension: 0.3,
+            fill: true,
+            backgroundColor: 'rgba(0, 255, 102, 0.08)'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: { x: { display: false }, y: { display: false } }
+        }
+      });
+    }
+
+    function initDeptChart() {
+      const ctx = document.getElementById('departmentChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Data&AI', 'Eng', 'QA', 'Cloud', 'Prod'],
+          datasets: [{
+            label: 'Net Profit ($M)',
+            data: [2077.03, 2066.06, 2054.59, 2050.32, 2044.15],
+            backgroundColor: [
+              'rgba(0, 240, 255, 0.7)',
+              'rgba(0, 255, 102, 0.7)',
+              'rgba(157, 78, 221, 0.7)',
+              'rgba(255, 170, 0, 0.7)',
+              'rgba(255, 0, 85, 0.7)'
+            ],
+            borderColor: '#0d1117',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: {
+              ticks: { color: '#8b949e', font: { size: 8 } },
+              grid: { display: false }
+            },
+            y: {
+              ticks: { color: '#8b949e', font: { size: 8 } },
+              grid: { color: 'rgba(255,255,255,0.05)' }
+            }
+          }
+        }
+      });
+    }
+
+    // -------------------------------------------------------------
+    // HTML5 CANVAS 3D INTERACTIVE PARTICLE TORUS (DONUT MATRIX)
+    // -------------------------------------------------------------
+    let canvas, ctx3d;
+    let particles = [];
+    let numParticles = 1100;
+    let rotX = 0.5, rotY = 0.5;
+    let isDragging = false;
+    let prevMousePos = { x: 0, y: 0 };
+    let rotationSpeed = 0.005;
+
+    function init3DTorus() {
+      const container = document.getElementById('canvas-container');
+      canvas = document.getElementById('torusCanvas');
+      ctx3d = canvas.getContext('2d');
+
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
+
+      // Create Particle Torus Nodes
+      const R = 120; // Major radius
+      const r = 45;  // Minor radius
+
+      for (let i = 0; i < numParticles; i++) {
+        const u = Math.random() * Math.PI * 2;
+        const v = Math.random() * Math.PI * 2;
+
+        // Torus coordinate equations
+        const x = (R + r * Math.cos(v)) * Math.cos(u);
+        const y = (R + r * Math.cos(v)) * Math.sin(u);
+        const z = r * Math.sin(v);
+
+        particles.push({
+          x, y, z,
+          u, v,
+          color: Math.random() > 0.3 ? '#00f0ff' : (Math.random() > 0.5 ? '#00ff66' : '#9d4edd')
+        });
+      }
+
+      // Mouse Interaction Events
+      canvas.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        prevMousePos = { x: e.clientX, y: e.clientY };
+      });
+
+      window.addEventListener('mouseup', () => isDragging = false);
+
+      window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const deltaX = e.clientX - prevMousePos.x;
+        const deltaY = e.clientY - prevMousePos.y;
+
+        rotY += deltaX * 0.008;
+        rotX += deltaY * 0.008;
+
+        prevMousePos = { x: e.clientX, y: e.clientY };
+
+        // Update UI status overlay
+        document.getElementById('pos-x').innerText = rotX.toFixed(2);
+        document.getElementById('pos-y').innerText = rotY.toFixed(2);
+      });
+
+      // Start Animation Loop
+      animate3DTorus();
+    }
+
+    function resizeCanvas() {
+      const container = document.getElementById('canvas-container');
+      canvas.width = container.clientWidth;
+      canvas.height = container.clientHeight;
+    }
+
+    function resetTorusRotation() {
+      rotX = 0.5;
+      rotY = 0.5;
+      rotationSpeed = 0.005;
+    }
+
+    function toggleTorusSpeed() {
+      rotationSpeed = rotationSpeed === 0.005 ? 0.02 : 0.005;
+    }
+
+    function animate3DTorus() {
+      ctx3d.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (!isDragging) {
+        rotY += rotationSpeed;
+        rotX += rotationSpeed * 0.5;
+      }
+
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      const fov = 320;
+
+      // Sort particles by Z depth for realistic rendering depth
+      const projected = [];
+
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+
+        // Rotation around Y
+        let x1 = p.x * Math.cos(rotY) + p.z * Math.sin(rotY);
+        let y1 = p.y;
+        let z1 = -p.x * Math.sin(rotY) + p.z * Math.cos(rotY);
+
+        // Rotation around X
+        let x2 = x1;
+        let y2 = y1 * Math.cos(rotX) - z1 * Math.sin(rotX);
+        let z2 = y1 * Math.sin(rotX) + z1 * Math.cos(rotX);
+
+        // Perspective Projection
+        const scale = fov / (fov + z2 + 200);
+        const projX = cx + x2 * scale;
+        const projY = cy + y2 * scale;
+
+        projected.push({
+          x: projX,
+          y: projY,
+          z: z2,
+          scale: scale,
+          color: p.color
+        });
+      }
+
+      projected.sort((a, b) => b.z - a.z);
+
+      // Render Vectors & Lines between nearby nodes
+      ctx3d.lineWidth = 0.3;
+      for (let i = 0; i < projected.length; i += 6) {
+        const p1 = projected[i];
+        for (let j = i + 1; j < projected.length && j < i + 4; j++) {
+          const p2 = projected[j];
+          const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+          if (dist < 35) {
+            ctx3d.strokeStyle = 'rgba(0, 240, 255, 0.15)';
+            ctx3d.beginPath();
+            ctx3d.moveTo(p1.x, p1.y);
+            ctx3d.lineTo(p2.x, p2.y);
+            ctx3d.stroke();
+          }
+        }
+      }
+
+      // Draw Nodes
+      for (let i = 0; i < projected.length; i++) {
+        const p = projected[i];
+        const size = Math.max(0.6, p.scale * 2.2);
+
+        ctx3d.fillStyle = p.color;
+        ctx3d.beginPath();
+        ctx3d.arc(p.x, p.y, size, 0, Math.PI * 2);
+        ctx3d.fill();
+
+        // Highlight random glowing node bursts
+        if (i % 80 === 0) {
+          ctx3d.strokeStyle = 'rgba(0, 255, 102, 0.6)';
+          ctx3d.beginPath();
+          ctx3d.arc(p.x, p.y, size * 2.5, 0, Math.PI * 2);
+          ctx3d.stroke();
+        }
+      }
+
+      requestAnimationFrame(animate3DTorus);
+    }
+  </script>
+</body>
+</html>
